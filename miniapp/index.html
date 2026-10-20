@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Агенты</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg: #0b1020; --panel: #121a2b; --line: #22304a; --text: #e7eefb; --muted: #8ba0bf;
+    --run: #22c55e; --ready: #3b82f6; --blocked: #ef4444; --idle: #64748b; --accent: #3b82f6;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: var(--bg); color: var(--text); overflow-x: hidden;
+         font: 14px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 12px 12px 96px; }
+  header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  h1 { font-size: 17px; margin: 0; flex: 1; }
+  .pill { font-size: 11.5px; color: var(--muted); background: var(--panel);
+          border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; }
+  .proj { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px; }
+  .proj button { flex: 0 0 auto; background: var(--panel); border: 1px solid var(--line);
+                 color: var(--muted); border-radius: 999px; padding: 7px 13px; font: 12.5px system-ui; }
+  .proj button.on { border-color: var(--accent); color: var(--text); background: rgba(59,130,246,.15); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+  .card .n { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 7px; }
+  .card .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .card .s { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .card .m { font-size: 11.5px; color: var(--muted); margin-top: 7px;
+             border-top: 1px solid var(--line); padding-top: 6px; }
+  .tabs { display: flex; gap: 6px; margin: 16px 0 10px; }
+  .tabs button { flex: 1; background: var(--panel); border: 1px solid var(--line); color: var(--muted);
+                 border-radius: 9px; padding: 9px 0; font: 600 12.5px system-ui; }
+  .tabs button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .task { border-left: 2px solid var(--line); padding: 7px 0 7px 10px; margin-bottom: 9px; }
+  .task .t { font-size: 13.5px; }
+  .task .m { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .task.running { border-left-color: var(--run); }
+  .task.ready { border-left-color: var(--ready); }
+  .task.blocked { border-left-color: var(--blocked); }
+  .task.done { border-left-color: var(--idle); opacity: .7; }
+  .msg { border-left: 2px solid var(--line); padding: 7px 0 7px 10px; margin-bottom: 10px; }
+  .msg.op { border-left-color: var(--accent); background: rgba(59,130,246,.08); border-radius: 0 8px 8px 0; }
+  .msg b { font-size: 12.5px; }
+  .msg .m { font-size: 11.5px; color: var(--muted); }
+  .msg p { margin: 4px 0 0; font-size: 13.5px; white-space: pre-wrap; }
+  .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 26px 0; }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--panel);
+         border-top: 1px solid var(--line); padding: 9px 12px calc(9px + env(safe-area-inset-bottom)); }
+  .bar .in { max-width: 720px; margin: 0 auto; display: flex; gap: 8px; }
+  .bar textarea { flex: 1; background: #0f1729; color: var(--text); border: 1px solid var(--line);
+                  border-radius: 10px; padding: 9px 11px; font: 13px system-ui; resize: none; height: 42px; }
+  .bar button { background: var(--accent); color: #fff; border: 0; border-radius: 10px;
+                padding: 0 15px; font: 600 13px system-ui; }
+  .bar button:disabled { background: #334155; }
+  .st { font-size: 11.5px; color: var(--muted); margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Агенты</h1>
+    <span class="pill" id="sum">загрузка…</span>
+  </header>
+  <div class="proj" id="projects"></div>
+  <div class="cards" id="cards"></div>
+  <div class="tabs">
+    <button data-tab="agent" class="on">Задачи</button>
+    <button data-tab="chat">Переписка</button>
+    <button data-tab="all">Все</button>
+  </div>
+  <div id="body"></div>
+</div>
+<div class="bar">
+  <div class="in">
+    <textarea id="txt" placeholder="Указание команде…"></textarea>
+    <button id="send">→</button>
+  </div>
+  <div class="st" id="st"></div>
+</div>
+<script>
+// Базовый URL API. Пусто = тот же origin (когда страницу раздаёт agent-board).
+// Другой хост задаётся один раз в localStorage: agentboard_api
+const API = (function () {
+  const saved = localStorage.getItem('agentboard_api');
+  return saved ? saved.replace(/\/$/, '') : '';
+})();
+let PROJECT = null, DATA = {agents:[], feed:[]}, TAB = "agent", SELECTED = null;
+
+const tg = window.Telegram && window.Telegram.WebApp;
+if (tg && tg.ready) tg.ready();
+
+function esc(s){return (s||'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));}
+function fmt(ts){ return ts ? new Date(ts*1000).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}) : ''; }
+const SC = {running:'#22c55e', ready:'#3b82f6', blocked:'#ef4444', idle:'#64748b'};
+const SR = {running:'работает', ready:'ждёт запуска', blocked:'заблокирован', idle:'свободен'};
+
+async function api(path, opts) {
+  const r = await fetch(API + path, opts);
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  return r.json();
+}
+
+async function loadProjects() {
+  const d = await api("/api/projects");
+  const ps = d.projects || [];
+  if (!PROJECT && ps.length) PROJECT = ps[0].name;
+  document.getElementById('projects').innerHTML = ps.map(p =>
+    `<button class="${p.name===PROJECT?'on':''}" data-p="${esc(p.name)}">
+       <span class="dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${
+         p.running?'#22c55e':(p.blocked?'#ef4444':(p.ready?'#3b82f6':'#64748b'))}"></span>
+       ${esc(p.name)} ${p.running}/${p.total}</button>`).join('');
+  document.querySelectorAll('#projects button').forEach(b => b.addEventListener('click', () => {
+    PROJECT = b.dataset.p; SELECTED = null; load();
+  }));
+}
+
+async function load() {
+  if (!PROJECT) return;
+  try {
+    DATA = await api("/api/project/" + encodeURIComponent(PROJECT));
+    render();
+  } catch (e) {
+    document.getElementById('body').innerHTML = '<div class="empty">нет связи с сервером: ' + esc(e.message) + '</div>';
+  }
+}
+
+function render() {
+  const c = {running:0, ready:0, blocked:0, done:0};
+  (DATA.agents||[]).forEach(a => { c.running+=a.counts.running; c.ready+=a.counts.ready;
+                                   c.blocked+=a.counts.blocked; c.done+=a.counts.done; });
+  document.getElementById('sum').textContent = c.running+' в работе · '+c.blocked+' блок · '+c.done+' сделано';
+
+  document.getElementById('cards').innerHTML = (DATA.agents||[]).map(a =>
+    `<div class="card" data-a="${esc(a.name)}">
+       <div class="n"><span class="dot" style="background:${SC[a.status]}"></span>${esc(a.name)}</div>
+       <div class="s">${esc(SR[a.status])} · в работе ${a.counts.running}</div>
+       <div class="m">${a.current[0] ? esc(a.current[0].title.slice(0,70)) : 'задач нет'}</div>
+     </div>`).join('');
+  document.querySelectorAll('.card').forEach(el => el.addEventListener('click', () => {
+    SELECTED = el.dataset.a; TAB = 'agent'; syncTabs(); renderBody();
+  }));
+
+  renderBody();
+}
+
+function renderBody() {
+  const box = document.getElementById('body');
+  const agent = (DATA.agents||[]).find(a => a.name === SELECTED);
+  if (TAB === 'chat') {
+    box.innerHTML = (DATA.feed||[]).length ? DATA.feed.slice(0,60).map(m =>
+      `<div class="msg ${m.author==='оператор'?'op':''}"><b>${esc(m.author||'—')}</b>
+         <span class="m"> ${fmt(m.ts)}</span><p>${esc(m.body)}</p></div>`).join('')
+      : '<div class="empty">сообщений пока нет</div>';
+    return;
+  }
+  if (TAB === 'all') {
+    const all = [];
+    (DATA.agents||[]).forEach(a => a.current.concat(a.done).forEach(t => all.push(Object.assign({who:a.name}, t))));
+    const ord = {running:0, blocked:1, ready:2, todo:3, done:4};
+    all.sort((x,y)=>(ord[x.status]||9)-(ord[y.status]||9));
+    box.innerHTML = all.length ? all.map(t => taskHtml(t, t.who)).join('') : '<div class="empty">задач нет</div>';
+    return;
+  }
+  if (!agent) {
+    box.innerHTML = '<div class="empty">Нажмите на карточку агента — его задачи</div>';
+    return;
+  }
+  const cur = (agent.current||[]).map(t => taskHtml(t)).join('');
+  const done = (agent.done||[]).map(t => taskHtml(t)).join('');
+  box.innerHTML = `<h3 style="font-size:14px;margin:2px 0 4px">${esc(agent.name)}</h3>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">${esc(SR[agent.status])} · выполнено ${agent.counts.done}</div>`
+    + (cur || '<div class="empty">задач нет</div>')
+    + '<h3 style="font-size:13px;color:var(--muted);margin:14px 0 8px">Выполнено '+agent.counts.done+'</h3>'
+    + (done || '');
+}
+function taskHtml(t, who) {
+  const c = {running:'var(--run)', ready:'var(--ready)', blocked:'var(--blocked)', done:'var(--idle)', todo:'var(--muted)'}[t.status]||'var(--muted)';
+  return `<div class="task ${t.status}"><div class="t">${esc(t.title)}</div>
+    <div class="m">${esc(t.status)}${who?' · '+esc(who):''}</div></div>`;
+}
+
+function syncTabs() {
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === TAB));
+}
+document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => {
+  TAB = b.dataset.tab; syncTabs(); renderBody();
+}));
+
+document.getElementById('send').addEventListener('click', async () => {
+  const t = document.getElementById('txt');
+  const text = t.value.trim();
+  if (!text) return;
+  const st = document.getElementById('st');
+  st.textContent = 'отправляю…';
+  try {
+    await api("/api/say", {method:'POST', headers:{'Content-Type':'application/json'},
+                        body: JSON.stringify({project: PROJECT, text})});
+    t.value = ''; st.textContent = 'доставлено, лидер разбужен';
+    TAB = 'chat'; syncTabs(); load();
+  } catch (e) { st.textContent = 'ошибка: ' + e.message; }
+});
+
+(async function () { await loadProjects(); await load(); setInterval(load, 3000); })();
+</script>
+</body>
+</html>

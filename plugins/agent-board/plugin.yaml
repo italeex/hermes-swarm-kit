@@ -1,0 +1,7 @@
+author: local
+description: "Живая карта агентов Agora: пузыри со статусом, задачи по клику, переписка с командой и отправка указаний прямо из дашборда Hermes."
+has_api: true
+has_dashboard: true
+kind: backend
+name: agent-board
+provides_tools: []

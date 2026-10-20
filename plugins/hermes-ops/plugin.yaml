@@ -1,0 +1,25 @@
+name: hermes-ops
+version: 1.0.0
+manifest_version: 1
+api_version: 1
+description: >
+  Дать агентам возможность безопасно менять сам Hermes: ставить и включать
+  плагины, ставить скиллы, создавать и останавливать cron-задачи, читать
+  конфигурацию и публиковать наработки в git. Disclosure — всё выполняется
+  локально через hermes CLI; никаких сетевых обращений, кроме установки
+  плагинов и скиллов из их собственных источников. Деньги и разрушительные
+  операции инструмент блокирует сам.
+author: local
+license: MIT
+requires_hermes: ">=0.21"
+tags: [automation, tools, self-management]
+provides_tools:
+- hermes_ops_status
+- hermes_ops_plugin_install
+- hermes_ops_plugin_toggle
+- hermes_ops_plugin_remove
+- hermes_ops_skill_install
+- hermes_ops_cron_create
+- hermes_ops_cron_pause
+- hermes_ops_config_get
+- hermes_ops_git_publish

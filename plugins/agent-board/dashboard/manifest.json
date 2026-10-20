@@ -1,0 +1,14 @@
+{
+  "name": "agent-board",
+  "label": "Агенты",
+  "description": "Живая карта агентов: пузыри со статусом, задачи по клику, переписка с командой и отправка указаний",
+  "icon": "Users",
+  "version": "1.0.0",
+  "tab": {
+    "path": "/agents",
+    "position": "after:kanban"
+  },
+  "entry": "dist/index.js",
+  "css": "dist/style.css",
+  "api": "plugin_api.py"
+}
