@@ -73,6 +73,36 @@ def _log(action: str, args: list[str], code: int, out: str) -> None:
 
 # ------------------------------------------------------------------ команды
 
+
+def op_notify_operator(args: dict[str, Any]) -> dict:
+    """Написать оператору в Telegram.
+
+    Для агентов это единственный канал связи с человеком. Правило, которое
+    закреплено в SOUL лидера: писать ТОЛЬКО когда (а) пришли деньги — с tx
+    hash, или (б) требуется действие оператора. Отчёты о прогрессе не пишутся.
+    """
+    text = str(args.get("text") or "").strip()
+    if not text:
+        return {"error": "пустой текст"}
+    reason = str(args.get("reason") or "").strip() or "unspecified"
+    if reason not in ("earned", "needs_operator"):
+        return {"error": "указывайте reason: earned (заработали) или needs_operator (нужно действие оператора)"}
+    body = text
+    if reason == "earned":
+        body = "💰 " + text
+    else:
+        body = "❗ " + text
+    try:
+        import subprocess
+        r = subprocess.run(["hermes", "send", "-t", "telegram", body],
+                           capture_output=True, text=True, timeout=60)
+        out = ((r.stdout or "") + (r.stderr or "")).strip()
+    except Exception as exc:  # noqa: BLE001
+        return {"error": f"{type(exc).__name__}: {exc}"}
+    _log("notify_operator", [reason], r.returncode, out)
+    return {"code": r.returncode, "reason": reason, "output": out[-500:]}
+
+
 def op_status(args: dict[str, Any]) -> dict:
     """Состояние системы: профили, плагины, скиллы, cron, диск, кошелёк."""
     out: dict[str, Any] = {}
@@ -250,6 +280,11 @@ def register(ctx: Any) -> None:
          op_config_get, False),
         ("hermes_ops_git_publish", "Закоммитить и запушить папку в git. Параметры: path, message, remote.",
          op_git_publish, False),
+        ("hermes_ops_notify_operator", "Написать оператору в Telegram. Писать ТОЛЬКО когда заработали "
+                                      "деньги (reason=earned, указать tx hash) или требуется действие "
+                                      "оператора (reason=needs_operator). Отчёты о прогрессе не пишутся. "
+                                      "Параметры: text, reason (earned|needs_operator).",
+         op_notify_operator, False),
     ]
     for name, desc, fn, destructive in defs:
         ctx.register_tool(

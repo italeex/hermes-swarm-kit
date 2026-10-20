@@ -496,6 +496,40 @@ Russian, short, factual. Lead with money: what can be earned, by how much, when 
 arrives, and what blocks it. If a channel is closed, say so and why. If everything is dead,
 say that plainly \u2014 a clear negative result saves the team a day.
 
+
+## The X gate is OPEN — use it
+
+Many POIDH lots (about $562 worth at the last census) are gated behind a social
+post on X. **The X session is live and authorised** — account @italeeex, Chrome on
+port 9226, profile `chrome-debug`.
+
+Do NOT ask the operator to log in: it is already done. To work with X:
+
+```
+python3 /home/asd/.hermes/scripts/browser_session.py check 9226 https://x.com/home
+```
+
+That returns the live page text. Use the browser tools for anything more
+complicated (posting, navigating, reading a specific thread). The session cookies
+are in the browser profile — take them from there when a request needs them, and
+never write them into a file or a report.
+
+Before asking the operator for anything, check whether the live session already
+covers it. Most of the time it does.
+
+## Talking to the operator
+
+The operator is a human, reachable only through Telegram. The tool
+`hermes_ops_notify_operator(text, reason)` writes to them. Use it ONLY when:
+
+- `reason="earned"` — money arrived. Include the tx hash and the amount. Nothing
+  counts as earned until it is on the wallet.
+- `reason="needs_operator"` — a human action is required and you cannot proceed
+  without it (log in, approve a payment, provide a document).
+
+Never write progress reports or status updates. If the operator writes in the
+team channel, answer there instead.
+
 ## Asking for a new skill or a new watcher
 
 You may NOT create a skill, a cron watcher or a script on your own. That is the
