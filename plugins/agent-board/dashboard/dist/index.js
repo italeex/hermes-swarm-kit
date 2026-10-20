@@ -175,7 +175,8 @@
         ctx.font = "600 " + (nb.r > 50 ? 13 : 11.5) + "px system-ui";
         ctx.fillStyle = col;
         ctx.fillText(nb.counts.running ? nb.counts.running + " в работе"
-          : (nb.counts.ready ? "ждёт запуска" : "свободен"), nb.x, nb.y + 21);
+          : (nb.status === "blocked" ? "заблокирован"
+          : (nb.status === "ready" ? "ждёт запуска" : "свободен")), nb.x, nb.y + 21);
         if (nb.counts.ready && nb.counts.running) {
           ctx.font = "12px system-ui"; ctx.fillStyle = "#7d97bd";
           ctx.fillText(nb.counts.ready + " готовы", nb.x, nb.y + 37);

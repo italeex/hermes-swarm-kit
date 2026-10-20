@@ -173,6 +173,8 @@ def project_state(name: str) -> dict:
         done = [t for t in items if t["status"] == "done"]
         cur.sort(key=lambda t: order.get(t["status"], 9))
         done.sort(key=lambda t: t["completed_at"] or 0, reverse=True)
+        # Порядок совпадает с panel-логикой в agent_tui.py: running > blocked > ready.
+        # Раньше ready перебивал blocked, и пузырь врал: агент с блоком выглядел «ждущим».
         status = "idle"
         if any(t["status"] == "running" for t in items):
             status = "running"
@@ -460,7 +462,8 @@ function draw(t){
     ctx.fillText(nm, b.x, b.y+1);
     ctx.font='600 '+(b.r>50?13:11.5)+'px system-ui'; ctx.fillStyle = col;
     ctx.fillText(b.counts.running ? b.counts.running+' в работе'
-               : (b.counts.ready ? 'ждёт запуска' : 'свободен'), b.x, b.y+21);
+               : (b.status==='blocked' ? 'заблокирован'
+               : (b.status==='ready' ? 'ждёт запуска' : 'свободен')), b.x, b.y+21);
     if (b.counts.ready && b.counts.running) {
       ctx.font='12px system-ui'; ctx.fillStyle='#7d97bd';
       ctx.fillText(b.counts.ready+' готовы', b.x, b.y+37);
