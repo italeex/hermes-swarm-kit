@@ -190,6 +190,19 @@ python3 ~/.hermes/scripts/make_role.py install leads --team site-factory --proje
 | `docs/OPERATIONS.md` | операции: TUI, ключи, диск, cron, журналы |
 | `docs/AGENT_BOARD.md` | плагин `agent-board`: вкладка дашборда и отдельный сервер |
 | `docs/MINIAPP.md` | Telegram mini-app |
+| `docs/NUDGE.md` | подталкивание команд к заработку |
+
+---
+
+## Подталкивание
+
+```bash
+python3 ~/.hermes/scripts/nudge.py
+```
+
+Cron `agora-nudge` каждые 10 минут: если команда молчит дольше 25 минут или стоит
+с задачами в очереди — шлёт в канал короткое указание с одним ожидаемым действием
+и будит лидера. Подробности: `docs/NUDGE.md`.
 
 ---
 
